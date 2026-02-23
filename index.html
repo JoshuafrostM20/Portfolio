@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joshua Frost - Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+    <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1A1A1A;
+            --card-bg: #1E1E1E;
+            --border-color: #41444B;
+            --text-primary: #DCDCDC;
+            --text-secondary: #A3A3A3;
+            --text-tertiary: #888888;
+            --accent-color: #8A6B4A;
+            --accent-secondary-color: #6A736B; 
+            --footer-bg: #121212;
+        }
+
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'General Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+        
+        #main-content { 
+            opacity: 1; 
+        }
+        
+        .card-bg {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card-bg:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        .navbar-glass {
+            background: rgba(26, 26, 26, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+        }
+        /* Mobile Menu */
+        #mobile-menu {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(12px);
+        }
+        #mobile-menu.open {
+            max-height: 400px;
+            opacity: 1;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .model-container {
+            width: 100%;
+            height: 300px; /* Default height */
+            background: #111;
+            border-radius: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .model-canvas {
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+        .load-model-overlay {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.7);
+            z-index: 10;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        .load-model-overlay:hover { background: rgba(0,0,0,0.6); }
+        
+        .fade-in-section {
+            opacity: 0; transform: translateY(30px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .fade-in-section.is-visible { opacity: 1; transform: translateY(0); }
+        
+        .nav-link {
+            position: relative; text-decoration: none;
+            color: var(--text-secondary); transition: color 0.3s ease;
+        }
+        .nav-link:hover { color: var(--text-primary); }
+        .nav-link::after {
+            content: ''; position: absolute; width: 100%; transform: scaleX(0);
+            height: 1px; bottom: -4px; left: 0;
+            background-color: var(--accent-color);
+            transform-origin: bottom right; transition: transform 0.3s ease-out;
+        }
+        .nav-link:hover::after { transform: scaleX(1); transform-origin: bottom left; }
+        
+        .accent-text { color: var(--accent-color); }
+        .text-tertiary { color: var(--text-tertiary); }
+        
+        .btn-primary {
+            background-color: var(--accent-color); color: #111111;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover { background-color: #9C7F60; }
+        
+        .social-link { color: var(--text-secondary); transition: color 0.3s ease; }
+        .social-link:hover { color: var(--accent-secondary-color); }
+        
+        .skill-tag {
+            border: 1px solid var(--border-color); color: var(--text-secondary);
+            padding: 4px 12px; border-radius: 9999px; font-size: 0.875rem;
+            display: inline-block; margin-bottom: 0.5rem;
+        }
+        /* Gallery Responsive Heights */
+        .gallery-container {
+            height: 16rem; /* Mobile */
+        }
+        @media (min-width: 768px) {
+            .gallery-container { height: 32rem; /* Desktop */ }
+        }
+
+        /* Modal Styles */
+        #project-modal {
+            position: fixed; inset: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #project-modal.open {
+            opacity: 1; pointer-events: auto;
+        }
+        .modal-backdrop {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            position: relative;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            width: 90%; max-width: 800px;
+            max-height: 90vh;
+            border-radius: 1rem;
+            display: flex; flex-direction: column;
+            transform: scale(0.95); transition: transform 0.3s ease;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        #project-modal.open .modal-content { transform: scale(1); }
+        
+        .modal-body {
+            overflow-y: auto; padding: 2rem;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-color) var(--card-bg);
+        }
+        .modal-body::-webkit-scrollbar { width: 8px; }
+        .modal-body::-webkit-scrollbar-thumb { background-color: var(--accent-color); border-radius: 4px; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Modal Container -->
+    <div id="project-modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white z-10 p-2 bg-black bg-opacity-20 rounded-full">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div class="modal-body">
+                <h2 id="modal-title" class="text-3xl font-bold mb-6 text-white border-b border-gray-700 pb-4"></h2>
+                <div id="modal-text" class="text-lg space-y-4" style="color: var(--text-secondary); line-height: 1.8;">
+                    <!-- Content injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <!-- Navigation Bar -->
+        <nav id="navbar" class="navbar-glass sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-20">
+                    <div class="flex items-center">
+                         <a href="https://www.linkedin.com/in/joshuacfrost/" target="_blank" class="text-sm font-medium nav-link flex items-center gap-2">
+                             <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                             LinkedIn
+                         </a>
+                    </div>
+                    <!-- Desktop Nav -->
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-8">
+                            <a href="#about" class="nav-link text-sm font-medium">About</a>
+                            <a href="#projects" class="nav-link text-sm font-medium">Projects</a>
+                            <a href="#resume" class="nav-link text-sm font-medium">Resume</a>
+                            <a href="#contact" class="nav-link text-sm font-medium">Contact</a>
+                        </div>
+                    </div>
+                    <!-- Mobile Nav Button -->
+                    <div class="md:hidden">
+                        <button id="mobile-menu-btn" class="text-gray-300 hover:text-white focus:outline-none p-2">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Mobile Menu Dropdown -->
+            <div id="mobile-menu" class="md:hidden">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 flex flex-col items-center">
+                    <a href="#about" class="block px-3 py-2 text-base font-medium nav-link mobile-link">About</a>
+                    <a href="#projects" class="block px-3 py-2 text-base font-medium nav-link mobile-link">Projects</a>
+                    <a href="#resume" class="block px-3 py-2 text-base font-medium nav-link mobile-link">Resume</a>
+                    <a href="#contact" class="block px-3 py-2 text-base font-medium nav-link mobile-link">Contact</a>
+                    <a href="https://www.linkedin.com/in/joshuacfrost/" target="_blank" class="block px-3 py-2 text-base font-medium nav-link mobile-link accent-text">LinkedIn</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <header class="bg-transparent">
+            <div class="max-w-7xl mx-auto py-20 px-4 sm:px-6 lg:px-8 text-center">
+                <p class="max-w-3xl mx-auto text-lg md:text-xl" style="color: var(--text-secondary);">
+                    Welcome to my portfolio. Here you can follow my work and projects. <span style="color: var(--accent-color); font-weight: 600; font-style: italic;">PS: the images, videos, and models may take some time to load.</span>
+                </p>
+                <div class="mt-8 md:mt-12">
+                    <a href="#projects" class="btn-primary inline-block font-semibold py-4 px-10 rounded-lg text-lg">View My Work</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-[95%] md:max-w-[90.00%] mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- About Section -->
+            <section id="about" class="py-16 md:py-24 fade-in-section">
+                 <h2 class="text-3xl font-medium text-center mb-16">About Me</h2>
+                <div class="flex flex-col md:flex-row items-center gap-12">
+                    <div class="md:w-1/3">
+                        <img src="https://raw.githubusercontent.com/JoshuafrostM20/Portfolio/main/gt%20sign.jpg" alt="Suvrat Jain" class="rounded-full w-48 h-48 md:w-full md:h-auto object-cover mx-auto shadow-lg">
+                    </div>
+                    <div class="md:w-2/3">
+                        <div id="about-me-text" class="text-base md:text-lg space-y-6" style="color: var(--text-secondary); line-height: 1.8;">
+                        <p>
+                            Hi, I'm Joshua Frost, a mechanical engineer driven by a lifelong curiosity for how things work and how they can be improved.
+                            I've wanted to be an engineer since I was a kid, taking apart anything I could find and trying to invent something better. That curiosity became focused through FIRST Robotics at Montgomery Blair High School, where I later served as Design Lead, and continued at Georgia Tech studying Mechanical Engineering.
+                        </p>
+
+                        <p>
+                            Today, I focus on building high-performance systems at the intersection of design, manufacturing, and emerging technology. As part of Pratt & Whitney's Manufacturing Engineering Development Program, I work in aerospace environments where precision, reliability, and accountability are critical.
+                        </p>
+
+                        <p>
+                            My experience spans product development, robotics, hybrid power systems, and performance-driven mechanical design — from leading robotics platforms to developing a compact hybrid powerplant and supporting advanced aerospace hardware. I'm motivated by solving complex problems, operating effectively under pressure, and continuously refining systems to perform better.
+                        </p>
+
+                        <p>
+                            This portfolio isn't meant to duplicate my résumé. Instead, it highlights the projects — personal, academic, and professional — that reflect how I think, what I choose to build, and how my curiosity has evolved into capability.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Projects Section -->
+            <section id="projects" class="py-16 md:py-24 fade-in-section">
+                <h2 class="text-3xl font-medium text-center mb-16">My Projects</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+
+                    <!-- Project 1 (Retains Read More and 3D Model) -->
+                    <div class="card-bg rounded-lg shadow-2xl overflow-hidden flex flex-col">
+                        <div class="p-6 md:p-8">
+                            <h3 class="text-xl font-medium">Compact Hybrid Powerplant</h3>
+                            <p id="project-desc-1" class="mt-2 text-sm md:text-base line-clamp-3" style="color: var(--text-secondary);">Led the design and full-system integration of a compact hybrid combustion–electric powerplant for micromobility applications. Packaged a 50cc Honda GX50 with a 4 kW BLDC system, optimized drivetrain ratios for dual-mode operation, and iterated through trade studies, prototyping, and testing under faculty guidance.</p>
+                            <!-- Blog Trigger Button -->
+                            <button onclick="openProjectModal(1)" class="text-sm mt-3 font-medium focus:outline-none hover:underline" style="color: var(--accent-color);">Read Full Story &rarr;</button>
+                        </div>
+                        <div class="px-6">
+                            <div id="model-container-1" class="model-container" data-model="https://media.githubusercontent.com/media/suvratjain-great/suvratjain-great.github.io/main/Hybrid_Engine.glb">
+                                <div class="load-model-overlay">
+                                    <div class="text-white text-3xl mb-2">↻</div>
+                                    <span class="text-white font-medium bg-black bg-opacity-50 px-3 py-1 rounded">Load 3D Model</span>
+                                </div>
+                                <canvas class="model-canvas"></canvas>
+                            </div>
+                        </div>
+                        <div class="p-6 md:p-8">
+                            <div class="relative gallery-container overflow-hidden rounded-md">
+                                <div class="gallery-track flex h-full transition-transform duration-300 ease-in-out">
+                                    <div class="gallery-item w-full flex-shrink-0 h-full"><img src="https://raw.githubusercontent.com/suvratjain-great/suvratjain-great.github.io/main/hybrid_img.jpeg" class="w-full h-full object-cover" loading="lazy"></div>
+                                    <div class="gallery-item w-full flex-shrink-0 h-full bg-black flex items-center justify-center">
+                                        <!-- Added muted for mobile autoplay -->
+                                        <video class="w-full h-full object-cover" autoplay loop muted playsinline>
+                                            <source src="https://files.catbox.moe/cfxli8.mp4" type="video/mp4">
+                                        </video>
+                                    </div>
+                                    <div class="gallery-item w-full flex-shrink-0 h-full bg-black flex items-center justify-center">
+                                        <video class="w-full h-full object-cover" autoplay loop muted playsinline>
+                                            <source src="https://files.catbox.moe/t4yovb.mp4" type="video/mp4">
+                                        </video>
+                                    </div>
+                                </div>
+                                <button class="gallery-next-btn absolute top-1/2 right-2 -translate-y-1/2 flex items-center text-white bg-black bg-opacity-50 p-2 rounded-full cursor-pointer hover:bg-opacity-75 transition-opacity z-10">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Project 2 (Robotics Competition Robot) - REVERTED TO ORIGINAL STATE WITH 3D MODEL -->
+                    <div class="card-bg rounded-lg shadow-2xl overflow-hidden flex flex-col">
+                         <div class="p-6 md:p-8">
+                            <h3 class="text-xl font-medium">Robotics Competition Robot</h3>
+                            <p id="project-desc-2" class="mt-2 text-sm md:text-base line-clamp-3" style="color: var(--text-secondary);">Collaborated on a budget-constrained automated robot to place objects in an arena under 30s. Designed a linkage arm for a sub-1s task completion and used Arduino/C++ to control pneumatics, motors, and linear actuators.</p>
+                            <!-- Blog Trigger Button Removed -->
+                        </div>
+                        <div class="px-6">
+                            <div id="model-container-2" class="model-container" data-model="https://media.githubusercontent.com/media/suvratjain-great/suvratjain-great.github.io/main/MainAssembly2110.glb">
+                                <div class="load-model-overlay">
+                                    <div class="text-white text-3xl mb-2">↻</div>
+                                    <span class="text-white font-medium bg-black bg-opacity-50 px-3 py-1 rounded">Load 3D Model</span>
+                                </div>
+                                <canvas class="model-canvas"></canvas>
+                            </div>
+                        </div>
+                         <div class="p-6 md:p-8">
+                            <div class="relative gallery-container overflow-hidden rounded-md">
+                                <div class="gallery-track flex h-full transition-transform duration-300 ease-in-out">
+                                    <div class="gallery-item w-full flex-shrink-0 h-full"><img src="https://raw.githubusercontent.com/suvratjain-great/suvratjain-great.github.io/main/2110_robot.jpeg" class="w-full h-full object-cover" loading="lazy"></div>
+                                    <div class="gallery-item w-full flex-shrink-0 h-full bg-black flex items-center justify-center">
+                                        <video class="w-full h-full object-cover" autoplay loop muted playsinline>
+                                            <source src="https://files.catbox.moe/mrqop2.mp4" type="video/mp4">
+                                        </video>
+                                    </div>
+                                </div>
+                                <button class="gallery-next-btn absolute top-1/2 right-2 -translate-y-1/2 flex items-center text-white bg-black bg-opacity-50 p-2 rounded-full cursor-pointer hover:bg-opacity-75 transition-opacity z-10">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Resume Section -->
+            <section id="resume" class="py-16 md:py-24 fade-in-section">
+                <h2 class="text-3xl font-medium text-center mb-8">Resume & Experience</h2>
+                <div class="text-center mb-12">
+                     <a href="Resume Suvrat Jain Dec1.pdf" download="Suvrat_Jain_Resume.pdf" class="btn-primary inline-flex items-center gap-2 font-medium py-2 px-4 rounded text-sm transition-transform hover:scale-105">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download Resume
+                     </a>
+                </div>
+                <div class="max-w-4xl mx-auto">
+                    <!-- Experience -->
+                    <div class="mb-16">
+                        <h3 class="text-2xl font-medium mb-8 border-b pb-4" style="border-color: var(--border-color);">Experience</h3>
+                        
+                        <!-- Research Assistant Position -->
+                        <div class="flex flex-col md:flex-row gap-4 md:gap-8 mb-12">
+                            <div class="md:w-1/4 text-sm text-tertiary font-medium">July 2025 - Present</div>
+                            <div class="md:w-3/4">
+                                <h4 class="text-lg font-semibold">Research Assistant (Project Eyeball)</h4>
+                                <p class="mb-2 text-sm md:text-base" style="color: var(--text-secondary);">Safe Robotics Lab</p>
+                                <p class="text-sm md:text-base" style="color: var(--text-secondary);">Making an asymmetric stereo camera setup utilizing cameras of different focal lengths to simulate human foveation, enabling accurate depth information acquisition. Implementing a vergence control depth estimation method for two 2-DOF gimbals moving relative to each other.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col md:flex-row gap-4 md:gap-8 mb-12">
+                            <div class="md:w-1/4 text-sm text-tertiary font-medium">Jan. 2023 - July 2023</div>
+                            <div class="md:w-3/4">
+                                <h4 class="text-lg font-semibold">Hardware Engineer</h4>
+                                <p class="mb-2 text-sm md:text-base" style="color: var(--text-secondary);">Amazon Robotics</p>
+                                <p class="text-sm md:text-base" style="color: var(--text-secondary);">Designed and optimized sensor enclosures using SolidWorks, focusing on DFM/DFA. Developed vibration damping mounts to eliminate camera failures and designed a lightweight, high-strength steel repair platform, reducing repair times by 66%.</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-4 md:gap-8 mb-12">
+                            <div class="md:w-1/4 text-sm text-tertiary font-medium">Jan. 2022 - June 2022</div>
+                            <div class="md:w-3/4">
+                                <h4 class="text-lg font-semibold">Robotics Project Engineer</h4>
+                                <p class="mb-2 text-sm md:text-base" style="color: var(--text-secondary);">Amazon Robotics</p>
+                                <p class="text-sm md:text-base" style="color: var(--text-secondary);">Led package automation and kickout improvement projects. Analyzed error logs and downtime to identify issues, proposing solutions that saved over $500K annually and improved efficiency.</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-4 md:gap-8">
+                            <div class="md:w-1/4 text-sm text-tertiary font-medium">May 2021 - Dec. 2021</div>
+                            <div class="md:w-3/4">
+                                <h4 class="text-lg font-semibold">Research Student - Nanoscale Manufacturing</h4>
+                                <p class="mb-2 text-sm md:text-base" style="color: var(--text-secondary);">Georgia Tech Manufacturing Institute</p>
+                                <p class="text-sm md:text-base" style="color: var(--text-secondary);">Built a slicing and motion control system using piezo-electric motors. Created a microscale mechanical ruling system capable of producing precise diffraction gratings.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Education -->
+                    <div class="mb-16">
+                      <h3 class="text-2xl font-medium mb-8 border-b pb-4" style="border-color: var(--border-color);">Education</h3>
+                      
+                      <div class="flex flex-col md:flex-row gap-4 md:gap-8 mb-6">
+                        <div class="md:w-1/4 text-sm text-tertiary font-medium">2025 - 2026</div>
+                        <div class="md:w-3/4">
+                          <h4 class="text-lg font-semibold">M.S. in Mechanical Engineering, Robotics Concentration</h4>
+                          <p class="mb-2 text-sm md:text-base" style="color: var(--text-secondary);">Georgia Institute of Technology, Atlanta, GA</p>
+                        </div>
+                      </div>
+
+                      <div class="flex flex-col md:flex-row gap-4 md:gap-8">
+                        <div class="md:w-1/4 text-sm text-tertiary font-medium">2021 - 2025</div>
+                        <div class="md:w-3/4">
+                          <h4 class="text-lg font-semibold">B.S. in Mechanical Engineering, Robotics Concentration</h4>
+                          <p class="mb-2 text-sm md:text-base" style="color: var(--text-secondary);">Georgia Institute of Technology, Atlanta, GA (GPA: 3.8)</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Skills -->
+                    <div>
+                         <h3 class="text-2xl font-medium mb-8 border-b pb-4" style="border-color: var(--border-color);">Skills</h3>
+                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                             <div>
+                                <h4 class="text-lg font-semibold mb-4">Tools & Software</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="skill-tag">SolidWorks</span>
+                                    <span class="skill-tag">FEA</span>
+                                    <span class="skill-tag">MATLAB</span>
+                                    <span class="skill-tag">Simulink</span>
+                                    <span class="skill-tag">C/C++</span>
+                                    <span class="skill-tag">Python</span>
+                                    <span class="skill-tag">Arduino</span>
+                                    <span class="skill-tag">STM32</span>
+                                </div>
+                             </div>
+                             <div>
+                                <h4 class="text-lg font-semibold mb-4">Design & Manufacturing</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="skill-tag">GD&T</span>
+                                    <span class="skill-tag">DFM</span>
+                                    <span class="skill-tag">DFA</span>
+                                    <span class="skill-tag">Machine Design</span>
+                                    <span class="skill-tag">Static/Fatigue Failure Analysis</span>
+                                </div>
+                             </div>
+                             <div>
+                                <h4 class="text-lg font-semibold mb-4">Controls & Robotics</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="skill-tag">PID Control</span>
+                                    <span class="skill-tag">Laplace Analysis</span>
+                                    <span class="skill-tag">Frequency Response</span>
+                                    <span class="skill-tag">Kinematics</span>
+                                    <span class="skill-tag">Vibrations Analysis</span>
+                                </div>
+                             </div>
+                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Contact Section -->
+            <section id="contact" class="py-16 md:py-24 text-center fade-in-section">
+                <h2 class="text-3xl font-medium mb-4">Get In Touch</h2>
+                <p class="text-base md:text-lg max-w-2xl mx-auto mb-10" style="color: var(--text-secondary);">
+                    I'm currently available for new opportunities. If you have a project in mind or just want to connect, feel free to reach out.
+                </p>
+                <a href="mailto:mastersuvratjain@gmail.com" class="btn-primary inline-block font-semibold py-4 px-10 rounded-lg text-lg break-all">
+                    mastersuvratjain@gmail.com
+                </a>
+            </section>
+        </main>
+
+        <footer class="border-t" style="background-color: var(--footer-bg); border-color: var(--border-color);">
+            <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center" style="color: var(--text-secondary);">
+                <p>&copy; 2024 Suvrat Jain. All Rights Reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // --- BLOG CONTENT STORE ---
+        // PASTE YOUR LONG TEXT HERE for each project
+        const projectData = {
+            1: {
+                title: "Compact Hybrid Powerplant",
+                content: `
+                <p class="mb-4">
+                The Compact Hybrid Powerplant originated from a personal idea: after building a high-power electric skateboard, I wanted to better understand combustion systems and explore how electric and ICE propulsion could be intelligently combined. What began as an independent concept evolved into a faculty-advised team project under David McNair, where we refined the idea into a compact, street-legal hybrid propulsion platform designed for micromobility applications.
+                </p>
+
+                <p class="mb-4">
+                The final scope expanded beyond a bicycle — the system was engineered as a modular hybrid powerplant capable of integration into bikes, mopeds, and small off-road vehicles.
+                </p>
+
+                <h4 class="text-xl font-bold text-white mt-6 mb-3">My Role — Lead Mechanical Designer & System Integrator</h4>
+
+                <p class="mb-4">
+                As Lead Designer, I was responsible for architecting and integrating the entire system. This required coordinating mechanical layout, drivetrain geometry, mounting structures, and packaging constraints while ensuring compatibility between combustion and electric subsystems.
+                </p>
+
+                <ul class="list-disc pl-6 mb-4">
+                <li>Designed and packaged a 50cc Honda GX50 engine with a 4 kW BLDC motor</li>
+                <li>Developed drivetrain interfaces and optimized gear ratios for dual-mode operation</li>
+                <li>Architected mounting structures to manage vibration, torque loads, and weight distribution</li>
+                <li>Conducted trade studies balancing performance, manufacturability, reliability, and size</li>
+                <li>Iterated through prototyping and testing to validate mechanical integration readiness</li>
+                </ul>
+
+                <p class="mb-4">
+                Beyond mechanical design, I worked directly with BLDC motor control and speed controllers, Arduino-based control logic, and system-level integration challenges across mechanical and electrical domains.
+                </p>
+
+                <h4 class="text-xl font-bold text-white mt-6 mb-3">Technical Skills Developed</h4>
+
+                <ul class="list-disc pl-6 mb-4">
+                <li>Machine design and load path analysis</li>
+                <li>Gear ratio optimization and torque-speed tradeoffs</li>
+                <li>Hybrid powertrain architecture</li>
+                <li>Structural design for vibration and dynamic loading</li>
+                <li>Control system integration between electric and combustion systems</li>
+                <li>Design iteration through analysis, prototyping, and real-world testing</li>
+                </ul>
+
+                <p class="mb-4">
+                Most importantly, it strengthened my systems thinking — not just designing components, but ensuring every subsystem functioned together as a cohesive machine.
+                </p>
+
+                <h4 class="text-xl font-bold text-white mt-6 mb-3">Why It Matters</h4>
+
+                <p class="mb-4">
+                The Compact Hybrid Powerplant represents a shift in how I approach engineering. It marked the transition from building individual mechanisms to architecting integrated systems. It required balancing performance, packaging, control logic, manufacturability, and reliability — the same multidimensional thinking required in high-performance engineering environments.
+                </p>
+
+                <p class="mb-4">
+                This project reflects how I think: start with curiosity, define constraints, architect the system, iterate aggressively, and refine until the hardware performs.
+                </p>
+                `
+            },
+            2: {
+                title: "Robotics Competition Robot",
+                content: `
+                    <p class="mb-4">Collaborated on a budget-constrained automated robot to place objects in an arena under 30s. Designed a linkage arm for a sub-1s task completion and used Arduino/C++ to control pneumatics, motors, and linear actuators.</p>
+                    <h4 class="text-xl font-bold text-white mt-6 mb-3">The Challenge</h4>
+                    <p class="mb-4">With a budget of only $100, we had to build a robot capable of autonomous navigation and precise object manipulation. The biggest hurdle was the time constraint: we had 30 seconds to complete the entire course.</p>
+                    <h4 class="text-xl font-bold text-white mt-6 mb-3">My Solution</h4>
+                    <p class="mb-4">I focused on speed. Instead of a complex multi-joint arm, I designed a specialized 4-bar linkage mechanism driven by high-torque servos. This allowed the robot to grab and dump the game objects in under 1 second, giving us a massive time advantage over teams using slower linear actuators.</p>
+                `
+            },
+            3: {
+                title: "4x4 IR Controlled Car",
+                content: `
+                    <p class="mb-4">Built a proof-of-concept 4x4 car for traction control. The system automatically detected wheel slip and applied brakes, allowing navigation of difficult terrains. Utilized an STM32 microcontroller with various sensors and PID control.</p>
+                    <h4 class="text-xl font-bold text-white mt-6 mb-3">The Challenge</h4>
+                    <p class="mb-4">Simulating traction control on a small scale requires incredibly fast sensor feedback. Standard hobby motors often lack the encoder resolution needed to detect micro-slips before the car loses traction completely.</p>
+                    <h4 class="text-xl font-bold text-white mt-6 mb-3">My Solution</h4>
+                    <p class="mb-4">I implemented a custom PID control loop on an STM32 chip. By comparing the expected speed (from throttle input) vs. actual wheel speed (from encoders) every few milliseconds, the system could detect slip almost instantly. It would then pulse the brakes on the slipping wheel, transferring torque to the wheels with grip—mimicking a real car's limited-slip differential.</p>
+                `
+            },
+            4: {
+                title: "Self-Balancing Robot",
+                content: `
+                    <p class="mb-4">Designed a two-wheeled self-balancing robot with an Arduino, IMU, and encoders. Implemented two PID-based controllers for pitch and velocity, enabling the robot to move while maintaining balance.</p>
+                    <h4 class="text-xl font-bold text-white mt-6 mb-3">The Challenge</h4>
+                    <p class="mb-4">A classic inverted pendulum problem. The difficulty lies in tuning the PID controller. If the response is too aggressive, the robot oscillates and falls. If it's too slow, it can't recover from a push.</p>
+                    <h4 class="text-xl font-bold text-white mt-6 mb-3">My Solution</h4>
+                    <p class="mb-4">I used a cascade control system. The inner loop controlled the pitch (balance) running at a very high frequency, while the outer loop controlled the velocity (position). This decoupling allowed the robot to lean forward to accelerate without falling over.</p>
+                `
+            },
+            5: {
+                title: "3-RRR Spherical Parallel Manipulator",
+                content: `
+                    <p class="mb-4">Designed a 3-DOF spherical parallel manipulator for robotic vision applications.</p>
+                    <h4 class="text-xl font-bold text-white mt-6 mb-3">The Challenge</h4>
+                    <p class="mb-4">Parallel manipulators are notorious for their complex kinematics. Unlike serial arms, the movement of one actuator affects the position of the entire end-effector in non-intuitive ways.</p>
+                    <h4 class="text-xl font-bold text-white mt-6 mb-3">My Solution</h4>
+                    <p class="mb-4">I modeled the entire system in MATLAB before cutting a single piece of metal. By solving the inverse kinematics equations first, I could optimize the link lengths to maximize the workspace and avoid singularity points where the robot would lock up.</p>
+                `
+            },
+            6: {
+                title: "Project Eyeball",
+                content: `
+                    <p class="mb-4">This project implements a biomimetic active vision system that mimics human foveation to estimate depth for a region of interest in real time without LiDAR or RGB-D cameras. Instead of dense pixel disparity, the system physically rotates two independently actuated cameras on 2-DOF gimbals to converge on a detected target (via YOLOv8), and computes depth directly from motor angles using vergence geometry. A Teensy 4.0 handles low-latency motor control and sensing, while calibration, outlier rejection, and Kalman filtering stabilize depth estimates for moving objects, demonstrating accurate, low-compute depth perception driven by mechanical control rather than heavy vision processing .</p>
+                    <h4 class="text-xl font-bold text-white mt-6 mb-3">Future work</h4>
+                    <p class="mb-4">Future experiments focus on extending the system’s accuracy and flexibility. One direction is active baseline control, where the stereo baseline is adjusted dynamically to improve depth resolution for both near and far targets. Another is foveated vision, using cameras with different focal lengths to combine wide-field detection with high-resolution inspection at long range. Additional work includes fusing vergence-based depth with monocular depth models to guide initial saccades, reduce settling time, and enable robust multi-target tracking, while preserving low computational cost.</p>
+                    `
+            }
+        };
+
+        // --- Modal Logic ---
+        const modal = document.getElementById('project-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalText = document.getElementById('modal-text');
+        const closeModal = document.getElementById('close-modal');
+        
+        // Expose function to window so HTML buttons can call it
+        window.openProjectModal = function(id) {
+            const data = projectData[id];
+            if(data) {
+                modalTitle.innerText = data.title;
+                modalText.innerHTML = data.content;
+                modal.classList.add('open');
+                document.body.style.overflow = 'hidden'; // Prevent background scrolling
+            }
+        }
+
+        function hideModal() {
+            modal.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        closeModal.addEventListener('click', hideModal);
+        
+        // Close on click outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target.classList.contains('modal-backdrop')) {
+                hideModal();
+            }
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('open')) {
+                hideModal();
+            }
+        });
+
+        // --- Mobile Menu Logic ---
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+        const links = document.querySelectorAll('.mobile-link');
+
+        if(btn && menu) {
+            btn.addEventListener('click', () => {
+                menu.classList.toggle('open');
+            });
+            links.forEach(link => {
+                link.addEventListener('click', () => {
+                    menu.classList.remove('open');
+                });
+            });
+        }
+
+        // --- 3D Viewer Logic (Lazy Loading) ---
+        function initViewer(containerId, modelPath) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            const canvas = container.querySelector('canvas');
+            const scene = new THREE.Scene();
+            
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(container.clientWidth, container.clientHeight);
+
+            const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 0, 5);
+
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enableZoom = true;
+            controls.autoRotate = true; // Auto rotate on load
+            controls.autoRotateSpeed = 2.0;
+
+            const ambientLight = new THREE.AmbientLight(0xDCDCDC, 1.6);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            directionalLight.position.set(5, 10, 7.5);
+            scene.add(directionalLight);
+
+            const loader = new GLTFLoader();
+            loader.load(modelPath, (gltf) => {
+                const model = gltf.scene;
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                model.position.sub(center);
+                scene.add(model);
+
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                cameraZ *= 1.5; 
+                camera.position.z = cameraZ;
+                camera.lookAt(new THREE.Vector3(0,0,0));
+                
+            }, undefined, (error) => {
+                console.error('Error loading model:', error);
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+            
+            window.addEventListener('resize', () => {
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
+            });
+        }
+
+        document.querySelectorAll('.model-container').forEach(container => {
+            const overlay = container.querySelector('.load-model-overlay');
+            const modelUrl = container.dataset.model;
+            const id = container.id;
+
+            if (overlay && modelUrl && modelUrl !== 'placeholder') {
+                overlay.addEventListener('click', () => {
+                    overlay.innerHTML = '<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>';
+                    initViewer(id, modelUrl);
+                    setTimeout(() => {
+                        overlay.style.opacity = '0';
+                        overlay.style.pointerEvents = 'none';
+                    }, 500);
+                });
+            } else if (modelUrl === 'placeholder') {
+                // For placeholder projects, just hide the canvas, but keep the overlay visible
+                const canvas = container.querySelector('.model-canvas');
+                if(canvas) canvas.classList.add('hidden');
+            }
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            document.querySelectorAll('.fade-in-section').forEach(s => observer.observe(s));
+            
+            document.querySelectorAll('.gallery-container').forEach(container => {
+                const track = container.querySelector('.gallery-track');
+                const nextBtn = container.querySelector('.gallery-next-btn');
+                if (!track || !nextBtn) return;
+                
+                const items = track.querySelectorAll('.gallery-item');
+                let idx = 0;
+                
+                nextBtn.addEventListener('click', () => {
+                    idx = (idx + 1) % items.length;
+                    track.style.transform = `translateX(-${idx * 100}%)`;
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+
